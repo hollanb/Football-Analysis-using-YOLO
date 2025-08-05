@@ -44,12 +44,18 @@ def collect_interval_stats(tracks, team_ball_control, fps, interval_seconds):
                 if pdata["speeds"]
                 else None
             )
+            team_value = pdata["team"]
+            if team_value is not None:
+                try:
+                    team_value = int(team_value)
+                except Exception:
+                    pass
             interval_stat["players"].append(
                 {
-                    "id": pid,
-                    "team": pdata["team"],
-                    "distance": pdata["distance"],
-                    "avg_speed": avg_speed,
+                    "id": int(pid),
+                    "team": team_value,
+                    "distance": float(pdata["distance"]),
+                    "avg_speed": float(avg_speed) if avg_speed is not None else None,
                     "ball_possession_time": pdata["has_ball_frames"] / fps,
                 }
             )

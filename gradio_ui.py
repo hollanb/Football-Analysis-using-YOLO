@@ -1,28 +1,16 @@
 
 import gradio as gr
-import os
 from analyzer import process_video as run_analysis
-import shutil
-import argparse
 
-def analyze_video(video_path, *features):
+def analyze_video(video_path, stats_interval, *features):
     # Call the analysis pipeline from main.py
     try:
-        
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--stats-interval",
-            type=int,
-            default=30,
-            help="Interval in seconds at which to record statistics",
+        output_path = run_analysis(
+            video_path,
+            features,
+            stats_interval=int(stats_interval),
+            stats_output="./output_videos/stats.json",
         )
-        parser.add_argument(
-            "--stats-output",
-            default="./output_videos/stats.json",
-            help="Path to the JSON file where stats will be saved",
-        )
-        args = parser.parse_args()
-        output_path = run_analysis(video_path, features, stats_interval=args.stats_interval, stats_output=args.stats_output)
         return "Analysis Complete", output_path
     except Exception as e:
         return f"Error: {e}", None
@@ -34,12 +22,13 @@ def create_commentary(video_path):
 with gr.Blocks() as interface:
     gr.Markdown("## Isaac Soccer Analyzer")
     video_input = gr.Video(label="Upload Match Video")
+    stats_interval = gr.Number(value=30, label="Stats Interval (sec)")
     features = [
         gr.Checkbox(label="Player Detection"),
         gr.Checkbox(label="Ball Tracking"),
         gr.Checkbox(label="Emotion Detection"),
         gr.Checkbox(label="Referee Signal Detection"),
-        gr.Checkbox(label="Voice Whistle Analysis")
+        gr.Checkbox(label="Voice Whistle Analysis"),
     ]
     analyze_btn = gr.Button("Analyze Video")
     analyze_output = gr.Textbox(label="Analysis Output")
@@ -50,8 +39,8 @@ with gr.Blocks() as interface:
 
     analyze_btn.click(
         analyze_video,
-        inputs=[video_input] + features,
-        outputs=[analyze_output, output_video]
+        inputs=[video_input, stats_interval] + features,
+        outputs=[analyze_output, output_video],
     )
 
     commentary_btn.click(
