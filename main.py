@@ -1,17 +1,20 @@
-from utils import read_video, save_video
-from trackers import Tracker
+import argparse
 import cv2
 import numpy as np
+
+from utils import read_video, save_video
+from trackers import Tracker
 from team_assigner import TeamAssigner
 from player_ball_assigner import PlayerBallAssigner
 from camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
 from speed_and_distance_estimator import SpeedAndDistance_Estimator
+from stats_collector import collect_interval_stats, save_stats_to_json
 
 
-def main():
+def main(stats_interval=30, stats_output="./output_videos/stats.json"):
     # Read Video
-    video_frames = read_video("./input_videos/match.mp4")
+    video_frames, fps = read_video("./input_videos/match.mp4")
 
     # Initialize Tracker
     tracker = Tracker("./models/best.pt")
@@ -39,7 +42,7 @@ def main():
     tracks["ball"] = tracker.interpolate_ball_positions(tracks["ball"])
 
     # Speed and distance estimator
-    speed_and_distance_estimator = SpeedAndDistance_Estimator()
+    speed_and_distance_estimator = SpeedAndDistance_Estimator(frame_rate=fps)
     speed_and_distance_estimator.add_speed_and_distance_to_tracks(tracks)
 
     # Assign Player Teams
@@ -87,8 +90,26 @@ def main():
     speed_and_distance_estimator.draw_speed_and_distance(output_video_frames, tracks)
 
     # Save video
-    save_video(output_video_frames, "./output_videos/output_video.avi")
+    save_video(output_video_frames, "./output_videos/output_video.avi", fps=fps)
+
+    # Save stats
+    stats = collect_interval_stats(tracks, team_ball_control, fps, stats_interval)
+    save_stats_to_json(stats, stats_output)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--stats-interval",
+        type=int,
+        default=30,
+        help="Interval in seconds at which to record statistics",
+    )
+    parser.add_argument(
+        "--stats-output",
+        default="./output_videos/stats.json",
+        help="Path to the JSON file where stats will be saved",
+    )
+    args = parser.parse_args()
+    main(stats_interval=args.stats_interval, stats_output=args.stats_output)
+
