@@ -93,7 +93,7 @@ def process_video(video_path, features, stats_interval=30, stats_output="./outpu
 
 
     # Save video
-    save_video(output_video_frames ,output_path,, fps=fps)
+    save_video(output_video_frames ,output_path, fps=fps)
       # Save stats
     stats = collect_interval_stats(tracks, team_ball_control, fps, stats_interval)
     save_stats_to_json(stats, stats_output)
