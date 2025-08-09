@@ -32,17 +32,6 @@ def process_video(video_path, features, stats_interval=30, stats_output="./outpu
     video_id = str(uuid.uuid4())
     output_path = f"/app/output_videos/{video_id}.avi"
 
-    if not player_detection:
-        save_video(video_frames, output_path, fps=fps)
-        save_stats_to_json([], stats_output)
-        if emotion_detection:
-            print("Emotion detection not implemented yet.")
-        if referee_signal:
-            print("Referee signal detection not implemented yet.")
-        if voice_whistle:
-            print("Voice whistle analysis not implemented yet.")
-        return output_path
-
     tracker = Tracker("./models/best.pt")
 
     tracks = tracker.get_object_tracks(
@@ -80,39 +69,38 @@ def process_video(video_path, features, stats_interval=30, stats_output="./outpu
             )
 
     team_ball_control = []
-    if ball_tracking:
-        player_assigner = PlayerBallAssigner()
-        for frame_num, player_track in enumerate(tracks["players"]):
-            ball_bbox = tracks["ball"][frame_num][1]["bbox"]
-            assigned_player = player_assigner.assign_ball_to_player(
-                player_track, ball_bbox
-            )
+    player_assigner = PlayerBallAssigner()
+    for frame_num, player_track in enumerate(tracks["players"]):
+        ball_bbox = tracks["ball"][frame_num][1]["bbox"]
+        assigned_player = player_assigner.assign_ball_to_player(
+            player_track, ball_bbox
+        )
 
-            if assigned_player != -1:
-                tracks["players"][frame_num][assigned_player]["has_ball"] = True
-                team_ball_control.append(
-                    tracks["players"][frame_num][assigned_player]["team"]
-                )
-            else:
-                team_ball_control.append(
-                    team_ball_control[-1] if team_ball_control else None
-                )
-    else:
-        team_ball_control = [None] * len(video_frames)
+        if assigned_player != -1:
+            tracks["players"][frame_num][assigned_player]["has_ball"] = True
+            team_ball_control.append(
+                tracks["players"][frame_num][assigned_player]["team"]
+            )
+        else:
+            team_ball_control.append(
+                team_ball_control[-1] if team_ball_control else None
+            )
 
     team_ball_control = np.array(team_ball_control)
 
     output_video_frames = tracker.draw_annotations(
-        video_frames, tracks, team_ball_control
+        video_frames, tracks, team_ball_control,
+        draw_players=player_detection, draw_ball=ball_tracking
     )
 
     output_video_frames = camera_movement_estimator.draw_camera_movement(
         output_video_frames, camera_movement_per_frame
     )
 
-    speed_and_distance_estimator.draw_speed_and_distance(
-        output_video_frames, tracks
-    )
+    if player_detection:
+        speed_and_distance_estimator.draw_speed_and_distance(
+            output_video_frames, tracks
+        )
 
     save_video(output_video_frames, output_path, fps=fps)
 
